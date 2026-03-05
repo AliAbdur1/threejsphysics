@@ -62,21 +62,40 @@ const environmentMapTexture = cubeTextureLoader.load([
 //World
 const world = new CANNON.World()
 world.gravity.set(0, -9.82, 0) //Vec3 is cannon JS. Vector is three JS
+
+//Materials of Physics
+const defaultMaterial = new CANNON.Material('default')
+
+
+const defaultContactMaterial = new CANNON.ContactMaterial(
+    defaultMaterial,
+    defaultMaterial,
+    {
+        friction: 0.1,
+        restitution: 0.7
+    }
+)// give instructions to the world about how objects should interact
+world.addContactMaterial(defaultContactMaterial)
+world.defaultContactMaterial = defaultContactMaterial
+
 // World Sphere
 const sphereShape = new CANNON.Sphere(0.5)
 const sphereBody = new CANNON.Body({
     mass: 1,
     position: new CANNON.Vec3(0, 3, 0),
-    shape: sphereShape
+    shape: sphereShape,
+    //material: defaultMaterial //not needed here because of 'world.defaultContactMaterial', but --> contact material property instructions
 })
+sphereBody.applyLocalForce(new CANNON.Vec3(150, 0, 0), new CANNON.Vec3(0,0,0))
 world.addBody(sphereBody)
 
 //Floor
 const floorShape = new CANNON.Plane()
 const floorBody = new CANNON.Body({
     mass: 0, // mass of 0 means it is static
-    shape: floorShape
-})
+    shape: floorShape,
+    //material: defaultMaterial // contact material property instructions
+}) // plane is infinite
 floorBody.quaternion.setFromAxisAngle(
     new CANNON.Vec3(-1, 0, 0),
     Math.PI * 0.5
@@ -195,6 +214,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       oldElapsedTime = elapsedTime;
 
       // Update physics world
+      sphereBody.applyForce(new CANNON.Vec3(-0.5, 0, 0), sphereBody.position) // 'wind' force on the ball
       world.step(1 / 60, deltaTime, 3)
 
       sphere.position.copy(sphereBody.position)
