@@ -30,10 +30,18 @@ function Example() {
           y: 3,
           z: (Math.random() - 0.5) * 3
         })
+      },
+      createBox: () => {
+        createBox(Math.random() * 1, Math.random() * 1, Math.random() * 1, {
+          x: (Math.random() - 0.5) * 3,
+          y: 3,
+          z: (Math.random() - 0.5) * 3
+        })
       }
     }
     
     gui.add(debugObject, 'createSphere')
+    gui.add(debugObject, 'createBox')
 
     const toggleGUI = (event) => {
       if (event.key === 'h') {
@@ -160,43 +168,45 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     controls.enableDamping = true;
 
     // Resize handler
-    const handleResize = () => {
-      sizes.width = window.innerWidth;
-      sizes.height = window.innerHeight;
-      camera.aspect = sizes.width / sizes.height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(sizes.width, sizes.height);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      console.log('window is resized');
-    };
-    window.addEventListener('resize', handleResize);
+    // const handleResize = () => {
+    //   sizes.width = window.innerWidth;
+    //   sizes.height = window.innerHeight;
+    //   camera.aspect = sizes.width / sizes.height;
+    //   camera.updateProjectionMatrix();
+    //   renderer.setSize(sizes.width, sizes.height);
+    //   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    //   console.log('window is resized');
+    // };
+    // window.addEventListener('resize', handleResize);
 
-    // Fullscreen toggle
-    const handleDblClick = () => {
-      const fullscreenElement =
-        document.fullscreenElement || document.webkitFullscreenElement;
+    // // Fullscreen toggle
+    // const handleDblClick = () => {
+    //   const fullscreenElement =
+    //     document.fullscreenElement || document.webkitFullscreenElement;
 
-      if (!fullscreenElement) {
-        if (canvasRef.current.requestFullscreen) {
-          canvasRef.current.requestFullscreen();
-        } else if (canvasRef.current.webkitRequestFullscreen) {
-          canvasRef.current.webkitRequestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
-      }
-      console.log('double clicked');
-    };
-    window.addEventListener('dblclick', handleDblClick);
+    //   if (!fullscreenElement) {
+    //     if (canvasRef.current.requestFullscreen) {
+    //       canvasRef.current.requestFullscreen();
+    //     } else if (canvasRef.current.webkitRequestFullscreen) {
+    //       canvasRef.current.webkitRequestFullscreen();
+    //     }
+    //   } else {
+    //     if (document.exitFullscreen) {
+    //       document.exitFullscreen();
+    //     } else if (document.webkitExitFullscreen) {
+    //       document.webkitExitFullscreen();
+    //     }
+    //   }
+    //   console.log('double clicked');
+    // };
+    // window.addEventListener('dblclick', handleDblClick);
 
     /**
      * Utilis
      */
     const objectsToUpdate = []
+
+
 
     const sphereGeometry = new THREE.SphereGeometry(1, 20, 20)
     const sphereMaterial = new THREE.MeshStandardMaterial({
@@ -232,6 +242,37 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     createSphere(0.5, { x: 0, y: 3, z: 0 })
 
+    //Box
+    const boxGeometry = new THREE.BoxGeometry(1,1,1)
+    const boxMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.3,
+      roughness: 0.4,
+      envMap: environmentMapTexture
+    })
+
+    const createBox = (width, height, depth, position) => {
+      const mesh = new THREE.Mesh(boxGeometry, boxMaterial)
+      mesh.scale.set(width, height, depth)
+      mesh.castShadow = true
+      mesh.position.copy(position)
+      scene.add(mesh)
+
+      const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2))
+      const body = new CANNON.Body({
+        mass: 1,
+        position: new CANNON.Vec3(position.x, position.y, position.z),
+        shape,
+        material: defaultMaterial
+      })
+      body.position.copy(position)
+      world.addBody(body)
+
+      objectsToUpdate.push({
+        mesh,
+        body
+      })
+    }
+
     // Animation loop
     const clock = new THREE.Clock();
     let oldElapsedTime = 0;
@@ -246,6 +287,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       for(const object of objectsToUpdate) {
         object.mesh.position.copy(object.body.position)
+        object.mesh.quaternion.copy(object.body.quaternion)
 
       }
 
@@ -264,8 +306,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     return () => {
       gui.destroy();
       window.removeEventListener('keydown', toggleGUI);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('dblclick', handleDblClick);
+      // window.removeEventListener('resize', handleResize);
+      // window.removeEventListener('dblclick', handleDblClick);
       renderer.dispose();
       // geometry.dispose();
       // material.dispose();
