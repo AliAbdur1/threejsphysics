@@ -40,8 +40,20 @@ function Example() {
       }
     }
     
+    debugObject.reset = () => {
+      for(const object of objectsToUpdate)
+      {
+        object.body.removeEventListener('collide', playHitSound)
+        world.removeBody(object.body)
+
+        // Remove the mesh from the scene
+        scene.remove(object.mesh)
+      }
+      objectsToUpdate.splice(0, objectsToUpdate.length)
+    }
     gui.add(debugObject, 'createSphere')
     gui.add(debugObject, 'createBox')
+    gui.add(debugObject, 'reset')
 
     const toggleGUI = (event) => {
       if (event.key === 'h') {
@@ -63,6 +75,21 @@ function Example() {
     camera.position.set(- 3, 3, 3)
     scene.add(camera);
 
+    //Sounds
+    const hitSound = new Audio('src/static/sounds/hit.mp3')
+
+    const playHitSound = (collision) => {
+      const impactStrength = collision.contact.getImpactVelocityAlongNormal()
+
+      if (impactStrength > 3) 
+      {
+        hitSound.volume = Math.min(impactStrength / 10, 1)
+        hitSound.currentTime = 0
+        hitSound.play()
+      }
+    }
+    //Sounds end
+
     /**
  * Textures
  */
@@ -70,7 +97,7 @@ const textureLoader = new THREE.TextureLoader()
 const cubeTextureLoader = new THREE.CubeTextureLoader()
 
 const environmentMapTexture = cubeTextureLoader.load([
-    'src/static/textures/environmentMaps/0/nx.png',
+    'src/static/textures/environmentMaps/0/px.png',
     'src/static/textures/environmentMaps/0/nx.png',
     'src/static/textures/environmentMaps/0/py.png',
     'src/static/textures/environmentMaps/0/ny.png',
@@ -81,6 +108,8 @@ const environmentMapTexture = cubeTextureLoader.load([
 //Physics
 //World
 const world = new CANNON.World()
+world.broadphase = new CANNON.SAPBroadphase(world) // performance tweak stuff
+world.allowSleep = true // performance tweak stuff
 world.gravity.set(0, -9.82, 0) //Vec3 is cannon JS. Vector is three JS
 
 //Materials of Physics
@@ -92,7 +121,7 @@ const defaultContactMaterial = new CANNON.ContactMaterial(
     defaultMaterial,
     {
         friction: 0.1,
-        restitution: 0.7
+        restitution: 0.2
     }
 )// give instructions to the world about how objects should interact
 world.addContactMaterial(defaultContactMaterial)
@@ -232,6 +261,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         material: defaultMaterial
       })
       body.position.copy(position)
+      body.addEventListener('collide', playHitSound)
       world.addBody(body)    
 
       objectsToUpdate.push({
@@ -265,6 +295,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         material: defaultMaterial
       })
       body.position.copy(position)
+      body.addEventListener('collide', playHitSound)
       world.addBody(body)
 
       objectsToUpdate.push({
